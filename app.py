@@ -1,39 +1,50 @@
 import streamlit as st
-from streamlit.components.v1 import html
-import json
+from streamlit_audio_recorder import audio_recorder
+import whisper
+import tempfile
+import os
 
-st.title("🎤 Real-Time Voice Search")
-st.write("Speak and see text appear instantly")
+# Load Whisper model (change "base" to "small" or "tiny" for faster but less accurate transcription)
+@st.cache_resource
+def load_model():
+    return whisper.load_model("base")
 
-# Get API key
-api_key = st.text_input("AssemblyAI API Key", type="password")
+model = load_model()
 
-# Load JavaScript
-with open("audio.js") as f:
-    js_code = f.read().replace("YOUR_API_KEY", api_key)
+st.title("🎙️ Live Audio Transcription")
+st.write("Record your voice and get an instant transcript below!")
 
-# Inject JavaScript
-html(f"""
-<script>
-{js_code}
-</script>
-<div id="status">Waiting for microphone access...</div>
-<div id="transcript" style="margin:20px; padding:10px; border:1px solid #ccc;"></div>
-""", height=300)
+# Record audio (returns WAV bytes)
+audio_bytes = audio_recorder()
 
-# Handle messages from JavaScript
-def handle_message(msg):
-    if msg.get("type") == "transcript":
-        st.write(f"**You said:** {msg['text']}")
-    elif msg.get("type") == "error":
-        st.error(msg["message"])
+if audio_bytes:
+    # Play back the recording
+    st.audio(audio_bytes, format="audio/wav")
 
-# Check for messages
-try:
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-    ctx = get_script_run_ctx()
-    if ctx and hasattr(ctx, 'request'):
-        msg = json.loads(ctx.request._request.body)
-        handle_message(msg)
-except:
-    pass
+    # Save to temporary file for Whisper
+tmp_wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    tmp_wav.write(audio_bytes)
+    tmp_wav.flush()
+
+    # Transcribe
+    with st.spinner("Transcribing..."):
+        result = model.transcribe(tmp_wav.name)
+        transcript = result.get("text", "")
+
+    # Clean up temp file
+    tmp_wav.close()
+    os.unlink(tmp_wav.name)
+
+    # Initialize chat history
+    if "history" not in st.session_state:
+        st.session_state.history = []
+    # Append new transcript
+    st.session_state.history.append(transcript)
+
+# Display chat history
+if "history" in st.session_state and st.session_state.history:
+    st.subheader("🗨️ Transcript Chat")
+    chat_content = "\n".join([
+        f"**You said:** {line}" for line in st.session_state.history
+    ])
+    st.markdown(chat_content)
