@@ -22,7 +22,7 @@ if audio_bytes:
     st.audio(audio_bytes, format="audio/wav")
 
     # Save to temporary file for Whisper
-tmp_wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    tmp_wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     tmp_wav.write(audio_bytes)
     tmp_wav.flush()
 
@@ -44,7 +44,8 @@ tmp_wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
 # Display chat history
 if "history" in st.session_state and st.session_state.history:
     st.subheader("🗨️ Transcript Chat")
-    chat_content = "\n".join([
+    chat_content = "
+".join([
         f"**You said:** {line}" for line in st.session_state.history
     ])
     st.markdown(chat_content)
