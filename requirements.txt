@@ -1,6 +1,6 @@
 streamlit
 # Install the audio recorder component from GitHub
-git+https://github.com/andfanilo/streamlit-audio-recorder.git
+git+https://github.com/stefanrmmr/streamlit-audio-recorder
 openai-whisper
 ffmpeg-python
 numpy
