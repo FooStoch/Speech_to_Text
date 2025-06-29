@@ -44,8 +44,7 @@ if audio_bytes:
 # Display chat history
 if "history" in st.session_state and st.session_state.history:
     st.subheader("🗨️ Transcript Chat")
-    chat_content = "
-".join([
+    chat_content = "".join([
         f"**You said:** {line}" for line in st.session_state.history
     ])
     st.markdown(chat_content)
