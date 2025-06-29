@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_audio_recorder import audio_recorder
+from st_audiorec import st_audiorec
 import whisper
 import tempfile
 import os
@@ -15,7 +15,7 @@ st.title("🎙️ Live Audio Transcription")
 st.write("Record your voice and get an instant transcript below!")
 
 # Record audio (returns WAV bytes)
-audio_bytes = audio_recorder()
+audio_bytes = st_audiorec()  # returns WAV bytes arrayBuffer format
 
 if audio_bytes:
     # Play back the recording
@@ -44,7 +44,8 @@ if audio_bytes:
 # Display chat history
 if "history" in st.session_state and st.session_state.history:
     st.subheader("🗨️ Transcript Chat")
-    chat_content = "".join([
+    chat_content = "
+".join([
         f"**You said:** {line}" for line in st.session_state.history
     ])
     st.markdown(chat_content)
