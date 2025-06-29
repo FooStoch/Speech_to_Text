@@ -1,47 +1,52 @@
 import streamlit as st
-from audio_recorder_streamlit import audio_recorder
-import torch
-from transformers import pipeline
+import streamlit.components.v1 as components
+import whisper
 import tempfile
 import os
 
-# Configure app
-st.set_page_config(page_title="🎤 Whisper Voice Search", layout="centered")
-st.title("🎤 Real-Time Transcription (Whisper)")
-st.caption("Speak and see text appear instantly - 100% free")
-
-# Initialize Whisper
-@st.cache_resource
-def load_whisper():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    return pipeline(
-        "automatic-speech-recognition",
-        model="openai/whisper-base",
-        device=device
-    )
-    
-whisper = load_whisper()
-
-# Audio recorder component
-audio_bytes = audio_recorder(
-    pause_threshold=2.0,
-    sample_rate=16_000,
-    text="Click to start recording",
-    recording_color="#e8b62c",
-    neutral_color="#6aa36f",
+# Declare the local audio recorder component
+_audio_recorder = components.declare_component(
+    "audio_recorder", path="st_audiorec/frontend"
 )
 
-# Process audio
+@st.cache_resource
+def load_model():
+    # Load Whisper "base" model, swap for "tiny", "small", etc. if desired
+    return whisper.load_model("base")
+
+model = load_model()
+
+st.title("🎙️ Live Audio Transcription")
+st.write("Speak into your mic and get live transcripts below.")
+
+# Record audio, returns WAV bytes
+audio_bytes = _audio_recorder()
+
 if audio_bytes:
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        tmp.write(audio_bytes)
-        tmp_path = tmp.name
-    
-    try:
-        result = whisper(tmp_path)
-        st.write("## Transcription")
-        st.write(result["text"])
-        
-        st.audio(audio_bytes, format="audio/wav")
-    finally:
-        os.unlink(tmp_path)
+    # Playback
+    st.audio(audio_bytes, format="audio/wav")
+
+    # Save to temp file for transcription
+tmp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    tmp_file.write(audio_bytes)
+    tmp_file.flush()
+
+    # Transcribe
+tmp_path = tmp_file.name
+    with st.spinner("Transcribing..."):
+        result = model.transcribe(tmp_path)
+        text = result.get("text", "")
+
+    tmp_file.close()
+    os.unlink(tmp_path)
+
+    # Store in session history
+    if "history" not in st.session_state:
+        st.session_state.history = []
+    st.session_state.history.append(text)
+
+# Display transcript chat
+if st.session_state.get("history"):
+    st.subheader("🗨️ Transcript Chat")
+    for msg in st.session_state.history:
+        st.markdown(f"**You said:** {msg}")
